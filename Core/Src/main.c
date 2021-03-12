@@ -46,6 +46,8 @@
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 /* USER CODE BEGIN PTD */
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
 #define STACK_SIZE 1024
 #define BYTE_POOL_SIZE 9120
 #define BLOCK_POOL_SIZE 100
@@ -58,13 +60,14 @@
 /* USER CODE BEGIN PV */
 TX_THREAD thread_0;
 TX_THREAD thread_1;
+TX_THREAD thread_2;
 TX_BYTE_POOL byte_pool_0;
 TX_MUTEX mtx_led;
 TX_EVENT_FLAGS_GROUP event_flags_0;
-TX_BLOCK_POOL block_pool_0;
 UCHAR memory_area[BYTE_POOL_SIZE];
-void thread_blink(ULONG thread_input);
-void thread_handle_button(ULONG thread_input);
+void blink_ld1(ULONG interval);
+void double_blink_ld2(ULONG interval);
+void button_ld2_handler(ULONG thread_input);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,39 +88,97 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 }
 
-
 /**
  * @brief function for defining the ThreadX application
  * @param first_unused_memory
  */
 void tx_application_define(void* first_unused_memory) {
     char* pointer = TX_NULL;
-    unsigned int status;
 
+    tx_mutex_create(&mtx_led, "mutex LED", TX_NO_INHERIT);
+    tx_event_flags_create(&event_flags_0, "event flags 0");
     tx_byte_pool_create(&byte_pool_0, "byte pool 0", memory_area, BYTE_POOL_SIZE);
 
+    // setup thread 0; pass in interval of 100 ticks
     tx_byte_allocate(&byte_pool_0, (VOID **) &pointer, STACK_SIZE, TX_NO_WAIT);
-    status = tx_thread_create(&thread_0, "thread 0", thread_blink, 0,
-                              pointer, STACK_SIZE,
-                              1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
-    if (status != TX_SUCCESS)
-    {
-        printf("thread creation failed\r\n");
+    tx_thread_create(&thread_0, "thread 0",
+                      blink_ld1, 100,
+                      pointer, STACK_SIZE,
+                      1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    // setup thread 1; pass in interval of 100 ticks
+    tx_byte_allocate(&byte_pool_0, (VOID **) &pointer, STACK_SIZE, TX_NO_WAIT);
+    tx_thread_create(&thread_1, "thread 1",
+                      double_blink_ld2, 100,
+                      pointer, STACK_SIZE,
+                      1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+    // setup thread 2; the thread input value is unused
+    tx_byte_allocate(&byte_pool_0, (VOID **) &pointer, STACK_SIZE, TX_NO_WAIT);
+    tx_thread_create(&thread_2, "thread 2",
+                     button_ld2_handler, 0,
+                     pointer, STACK_SIZE,
+                     1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
+}
+
+/**
+ * @brief thread that blinks LD1 at specified interval with 50% duty cycle
+ * @param interval: period of blinking in ticks
+ */
+void blink_ld1(ULONG interval) {
+    UINT status;
+    ULONG ticks_on = interval / 2;
+    while (1) {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+        tx_thread_sleep(ticks_on);  // this is in ticks, which is default 100 per second.
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+        tx_thread_sleep(ticks_on);
     }
 
 }
 
 /**
- * @brief thread that blinks at 1 second interval.
- * @param thread_input
+ * @brief thread that double blinks LD2 at specified interval
+ * @param interval: period at which double blinks occur
  */
-void thread_blink(ULONG thread_input) {
-    unsigned int status;
+void double_blink_ld2(ULONG interval) {
+    UINT status;
+    ULONG ticks_wait = interval - 30;
     while (1) {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-        tx_thread_sleep(100);  // this is in ticks, which is default 100 per second.
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-        tx_thread_sleep(100);
+        tx_mutex_get(&mtx_led, TX_WAIT_FOREVER);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+        tx_thread_sleep(10);  // this is in ticks, which is default 100 per second.
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+        tx_thread_sleep(10);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+        tx_thread_sleep(10);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+        tx_mutex_put(&mtx_led);
+        tx_thread_sleep(ticks_wait);
+    }
+
+}
+
+/**
+ * @brief thread turns on LD2 if user button is pressed
+ * @param thread_input: not used, but required by threadx
+ */
+void button_ld2_handler(ULONG thread_input) {
+    UINT status;
+    ULONG actual_flag_values;
+    while (1) {
+        tx_event_flags_get(&event_flags_0, EVT_BUTTON_PRESSED, TX_AND_CLEAR,
+                           &actual_flag_values, TX_WAIT_FOREVER);
+        tx_thread_sleep(2);  // easy debounce wait of 20 ms
+        if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET) {
+            // button pressed is LOW
+            tx_mutex_get(&mtx_led, TX_WAIT_FOREVER);
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
+        }
+        else {
+            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
+            tx_mutex_put(&mtx_led);
+        }
     }
 
 }
@@ -298,3 +359,5 @@ void assert_failed(uint8_t *file, uint32_t line)
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
+#pragma clang diagnostic pop
