@@ -55,11 +55,6 @@
     </key>
   </component>
   <component name="RunManager" selected="OpenOCD Download &amp; Run.OCD ee5450-module2-hw0">
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="ee5450-module2-hw0.elf" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="ee5450-module2-hw0" TARGET_NAME="ee5450-module2-hw0.elf" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="ee5450-module2-hw0" RUN_TARGET_NAME="ee5450-module2-hw0.elf">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
@@ -68,11 +63,6 @@
     <configuration name="threadx" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="ee5450-module2-hw0" TARGET_NAME="threadx" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="GradleAppRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="com.jetbrains.cidr.cpp.gradle.execution.GradleNativeBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
     <list>
@@ -90,7 +80,8 @@
       <option name="presentableId" value="Default" />
       <updated>1615495402313</updated>
       <workItem from="1615495426818" duration="6769000" />
-      <workItem from="1615581522835" duration="2910000" />
+      <workItem from="1615581522835" duration="3655000" />
+      <workItem from="1616700665432" duration="1222000" />
     </task>
     <servers />
   </component>

@@ -31,6 +31,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdbool.h>
 #include "tx_api.h"
 /* USER CODE END Includes */
 
@@ -159,6 +160,36 @@ void double_blink_ld2(ULONG interval) {
 
 }
 
+
+/**
+ * @brief testable function to toggle mutex and led based on button press
+ * @param gpio_port_button
+ * @param gpio_pin_button
+ * @param gpio_port_led
+ * @param gpio_pin_led
+ * @param mutex_led
+ * @return true if mutex gotten and led set; false if led unset and mutex put
+ */
+bool button_toggle_mutex_and_led(
+        GPIO_TypeDef * gpio_port_button,
+        uint16_t gpio_pin_button,
+        GPIO_TypeDef* gpio_port_led,
+        uint16_t gpio_pin_led,
+        TX_MUTEX* mutex_led) {
+    if (HAL_GPIO_ReadPin(gpio_port_button, gpio_pin_button) == GPIO_PIN_RESET) {
+        // button pressed is LOW
+        tx_mutex_get(mutex_led, TX_WAIT_FOREVER);
+        HAL_GPIO_WritePin(gpio_port_led, gpio_pin_led, GPIO_PIN_SET);
+        return true;
+    }
+    else {
+        HAL_GPIO_WritePin(gpio_port_led, gpio_pin_led, GPIO_PIN_RESET);
+        tx_mutex_put(mutex_led);
+        return false;
+    }
+}
+
+
 /**
  * @brief thread turns on LD2 if user button is pressed
  * @param thread_input: not used, but required by threadx
@@ -170,15 +201,10 @@ void button_ld2_handler(ULONG thread_input) {
         tx_event_flags_get(&event_flags_0, EVT_BUTTON_PRESSED, TX_AND_CLEAR,
                            &actual_flag_values, TX_WAIT_FOREVER);
         tx_thread_sleep(2);  // easy debounce wait of 20 ms
-        if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET) {
-            // button pressed is LOW
-            tx_mutex_get(&mtx_led, TX_WAIT_FOREVER);
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-        }
-        else {
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
-            tx_mutex_put(&mtx_led);
-        }
+        button_toggle_mutex_and_led(GPIOC, GPIO_PIN_13,
+                                    GPIOB, GPIO_PIN_14,
+                                    &mtx_led);
+
     }
 
 }
